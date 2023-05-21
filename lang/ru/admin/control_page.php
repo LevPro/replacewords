@@ -1,0 +1,10 @@
+<?
+$MESS["LEVPRO_REPLACEWORDS_TITLE"] = "Массовая замена текста";
+$MESS["LEVPRO_REPLACEWORDS_ID"] = "ID";
+$MESS["LEVPRO_REPLACEWORDS_URL"] = "Страницы";
+$MESS["LEVPRO_REPLACEWORDS_FROM"] = "Искомый текст";
+$MESS["LEVPRO_REPLACEWORDS_TO"] = "Заменить на";
+$MESS["LEVPRO_REPLACEWORDS_EDIT"] = "Изменить";
+$MESS["LEVPRO_REPLACEWORDS_DELETE"] = "Удалить";
+$MESS["LEVPRO_REPLACEWORDS_COPY"] = "Копировать";
+?>
