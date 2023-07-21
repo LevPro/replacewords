@@ -28,7 +28,9 @@ IncludeModuleLangFile($_SERVER["DOCUMENT_ROOT"] . BX_ROOT . "/modules/main/inter
 
 CJSCore::Init(["jquery"]);
 
-$gridOptions = new GridOptions($moduleId);
+$listId = 'levpro_replacewords';
+
+$gridOptions = new GridOptions($listId);
 
 $navParams = $gridOptions->GetNavParams();
 
@@ -47,37 +49,47 @@ $sqlLimit = 'LIMIT ' . $nav->getLimit();
 
 $sqlOffset = 'OFFSET ' . $nav->getOffset();
 
-if (($_GET['grid_id'] ?? null) === $moduleId) {
+if (($_GET['grid_id'] ?? null) === $listId) {
     if (isset($_GET['grid_action']) and $_GET['grid_action'] === 'sort') {
-        $sqlOrder = "ORDER BY `{$DB->ForSql($_GET['by'])}` {$DB->ForSql($_GET['order'])}";
+        $sqlOrder = sprintf("ORDER BY `%s` %s", $DB->ForSql($_GET['by']), $DB->ForSql($_GET['order']));
     }
 }
 
-$filterOption = new Bitrix\Main\UI\Filter\Options($list_id);
+$filterOption = new Bitrix\Main\UI\Filter\Options($listId);
 
 $filterData = $filterOption->getFilter([]);
 
-$filter = [];
+//var_dump($filterData); exit;
 
 foreach ($filterData as $key => $value) {
-    if ($key === 'URL' && strlen($value) > 0) {
-        $sqlWhere .= " AND URL LIKE '%{$DB->ForSql($value)}%'";
+    if ($key == 'URL' && !empty($value)) {
+        $sqlWhere .= sprintf(" AND `URL` = '%s'", $DB->ForSql($value));
     }
-    if ($key === 'FROM' && strlen($value) > 0) {
-        $sqlWhere .= " AND FROM LIKE '%{$DB->ForSql($value)}%'";
+    if ($key == 'FROM' && !empty($value)) {
+        $sqlWhere .= sprintf(" AND `FROM` = '%s'", $DB->ForSql($value));
     }
-    if ($key === 'TO' && strlen($value) > 0) {
-        $sqlWhere .= " AND TO LIKE '%{$DB->ForSql($value)}%'";
+    if ($key == 'TO' && !empty($value)) {
+        $sqlWhere .= sprintf(" AND `TO` = '%s'", $DB->ForSql($value));
+    }
+	if ($key == 'QUANTITY' && !empty($value)) {
+        $sqlWhere .= sprintf(" AND `QUANTITY` = '%s'", $DB->ForSql($value));
+    }
+	if ($key == 'GET_PARAMS' && !empty($value)) {
+        $sqlWhere .= sprintf(" AND `GET_PARAMS` = '%s'", $DB->ForSql($value));
     }
 }
 
 $sqlQuery = sprintf("SELECT * FROM `levpro_replacewords` %s %s %s %s", $sqlWhere, $sqlOrder, $sqlLimit, $sqlOffset);
+
+//var_dump($sqlQuery); exit;
 
 $rsData = $DB->query($sqlQuery);
 
 $list = [];
 
 while ($row = $rsData->fetch()) {
+	$row['GET_PARAMS'] = $row['GET_PARAMS'] == 'Y' ? GetMessage("LEVPRO_REPLACEWORDS_YES") : GetMessage("LEVPRO_REPLACEWORDS_NO");
+	
     $itemId = $row['ID'];
 
     $list[] = [
@@ -103,10 +115,12 @@ while ($row = $rsData->fetch()) {
 }
 
 $arHeaders = [
-    ["id" => "ID", "name" => GetMessage("LEVPRO_REPLACEWORDS_ID"), "sort" => "ID", "align" => "center", "default" => true],
-    ["id" => "URL", "name" => GetMessage("LEVPRO_REPLACEWORDS_URL"), "sort" => "URL", "align" => "center", "default" => true],
-    ["id" => "FROM", "name" => GetMessage("LEVPRO_REPLACEWORDS_FROM"), "sort" => "FROM", "align" => "center", "default" => true],
-    ["id" => "TO", "name" => GetMessage("LEVPRO_REPLACEWORDS_TO"), "sort" => "TO", "align" => "center", "default" => true],
+    ["id" => "ID", "name" => GetMessage("LEVPRO_REPLACEWORDS_ID"), "sort" => "ID", "align" => "left", "default" => false],
+    ["id" => "URL", "name" => GetMessage("LEVPRO_REPLACEWORDS_URL"), "sort" => "URL", "align" => "left", "default" => false],
+    ["id" => "FROM", "name" => GetMessage("LEVPRO_REPLACEWORDS_FROM"), "sort" => "FROM", "align" => "left", "default" => true],
+    ["id" => "TO", "name" => GetMessage("LEVPRO_REPLACEWORDS_TO"), "sort" => "TO", "align" => "left", "default" => true],
+	["id" => "QUANTITY", "name" => GetMessage("LEVPRO_REPLACEWORDS_QUANTITY"), "sort" => "TO", "align" => "left", "default" => false],
+	["id" => "GET_PARAMS", "name" => GetMessage("LEVPRO_REPLACEWORDS_GET_PARAMS"), "sort" => "TO", "align" => "left", "default" => false],
 ];
 
 $filterList = [
@@ -114,13 +128,13 @@ $filterList = [
         "id" => "ID",
         'type' => 'number',
         "name" => GetMessage("LEVPRO_REPLACEWORDS_ID"),
-        "default" => true,
+        "default" => false,
     ],
     [
         "id" => "URL",
         'type' => 'url',
         "name" => GetMessage("LEVPRO_REPLACEWORDS_URL"),
-        "default" => true
+        "default" => false
     ],
     [
         "id" => "FROM",
@@ -133,6 +147,26 @@ $filterList = [
         'type' => 'text',
         "name" => GetMessage("LEVPRO_REPLACEWORDS_TO"),
         "default" => true
+    ],
+    [
+        "id" => "QUANTITY",
+        'type' => 'text',
+        "name" => GetMessage("LEVPRO_REPLACEWORDS_QUANTITY"),
+        "default" => false
+    ],
+    [
+        "id" => "GET_PARAMS",
+        'type' => 'list',
+        "name" => GetMessage("LEVPRO_REPLACEWORDS_GET_PARAMS"),
+        "default" => false,
+		'items' => [
+		    '' => GetMessage("LEVPRO_REPLACEWORDS_ALL"), 
+			'Y' => GetMessage("LEVPRO_REPLACEWORDS_YES"), 
+			'N' => GetMessage("LEVPRO_REPLACEWORDS_NO")
+		], 
+		'params' => [
+		    'multiple' => 'Y'
+		]
     ]
 ];
 
@@ -155,7 +189,7 @@ require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_a
     <div class="adm-info-message-wrap adm-info-message-red">
         <?php foreach ($_SESSION['errors'] as $item) { ?>
             <div class="adm-info-message">
-                <div class="adm-info-message-title">Ошибка</div>
+                <div class="adm-info-message-title"><?php echo GetMessage("LEVPRO_REPLACEWORDS_ERROR") ?></div>
                 <?php echo $item ?>
                 <br>
                 <div class="adm-info-message-icon"></div>
@@ -167,7 +201,7 @@ require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_a
     <div class="adm-info-message-wrap adm-info-message-green">
         <?php foreach ($_SESSION['result'] as $item) { ?>
             <div class="adm-info-message">
-                <div class="adm-info-message-title">Успешно</div>
+                <div class="adm-info-message-title"><?php echo GetMessage("LEVPRO_REPLACEWORDS_SUCCESS") ?></div>
                 <?php echo $item ?>
                 <br>
                 <div class="adm-info-message-icon"></div>
@@ -178,8 +212,8 @@ require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_a
 <div class="adm-toolbar-panel-container">
     <div class="adm-toolbar-panel-flexible-space">
         <?php $APPLICATION->IncludeComponent('bitrix:main.ui.filter', '', [
-            'FILTER_ID' => $moduleId,
-            'GRID_ID' => $moduleId,
+            'FILTER_ID' => $listId,
+            'GRID_ID' => $listId,
             'FILTER' => $filterList,
             'ENABLE_LIVE_SEARCH' => true,
             'ENABLE_LABEL' => true
@@ -194,7 +228,7 @@ require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_a
 </div>
 <?php
 $APPLICATION->IncludeComponent('bitrix:main.ui.grid', '', [
-    'GRID_ID' => $moduleId,
+    'GRID_ID' => $listId,
     'COLUMNS' => $arHeaders,
     'ROWS' => $list,
     'SHOW_ROW_CHECKBOXES' => false,
@@ -207,7 +241,7 @@ $APPLICATION->IncludeComponent('bitrix:main.ui.grid', '', [
         ['NAME' => '50', 'VALUE' => '50'],
         ['NAME' => '100', 'VALUE' => '100']
     ],
-    'AJAX_OPTION_JUMP' => 'N',
+    'AJAX_OPTION_JUMP' => 'Y',
     'SHOW_CHECK_ALL_CHECKBOXES' => false,
     'SHOW_ROW_ACTIONS_MENU' => true,
     'SHOW_GRID_SETTINGS_MENU' => true,
@@ -222,8 +256,8 @@ $APPLICATION->IncludeComponent('bitrix:main.ui.grid', '', [
     'ALLOW_HORIZONTAL_SCROLL' => true,
     'ALLOW_SORT' => true,
     'ALLOW_PIN_HEADER' => true,
-    'AJAX_OPTION_HISTORY' => 'N',
-    'TOTAL_ROWS_COUNT_HTML' => '<span class="main-grid-panel-content-title">Всего:</span> <span class="main-grid-panel-content-text">' . $nav->getRecordCount() . '</span>',
+    'AJAX_OPTION_HISTORY' => 'Y',
+    'TOTAL_ROWS_COUNT_HTML' => '<span class="main-grid-panel-content-title">' . GetMessage("LEVPRO_REPLACEWORDS_TOTAL") . ':</span> <span class="main-grid-panel-content-text">' . $nav->getRecordCount() . '</span>',
 //    'ACTION_PANEL' => [
 //        'GROUPS' => [
 //            'TYPE' => [

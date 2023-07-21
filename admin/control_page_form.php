@@ -14,6 +14,8 @@ use Bitrix\Main\UI\PageNavigation;
 
 $moduleId = "levpro.replacewords";
 
+$reuestData = array_merge($_POST, $_GET);
+
 require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_before.php");
 
 Loader::includeModule($moduleId);
@@ -23,7 +25,7 @@ IncludeModuleLangFile($_SERVER["DOCUMENT_ROOT"] . BX_ROOT . "/modules/main/inter
 
 CJSCore::Init(["jquery"]);
 
-$editItem = isset($_GET['id']) ? (new CLevproReplacewords)->safeParam($_GET['id']) : [];
+$editItem = isset($reuestData['id']) ? (new CLevproReplacewords)->safeParam($reuestData['id']) : [];
 
 if (!empty($editItem)) {
     $sqlQuery = sprintf("SELECT * FROM `levpro_replacewords` WHERE `ID` = %s", $DB->ForSql($editItem));
@@ -35,7 +37,7 @@ if (!empty($editItem)) {
     }
 }
 
-$removeItem = isset($_GET['remove']) ? (new CLevproReplacewords)->safeParam($_GET['remove']) : [];
+$removeItem = isset($reuestData['remove']) ? (new CLevproReplacewords)->safeParam($reuestData['remove']) : [];
 
 if (!empty($removeItem)) {
     $sqlQuery = sprintf("DELETE FROM `levpro_replacewords` WHERE `ID` = %s", $DB->ForSql($removeItem));
@@ -51,7 +53,7 @@ if (!empty($removeItem)) {
     exit();
 }
 
-$copyItem = isset($_GET['copy']) ? (new CLevproReplacewords)->safeParam($_GET['copy']) : [];
+$copyItem = isset($reuestData['copy']) ? (new CLevproReplacewords)->safeParam($reuestData['copy']) : [];
 
 if (!empty($copyItem)) {
     $sqlQuery = sprintf("SELECT * FROM `levpro_replacewords` WHERE `ID` = %s", $DB->ForSql($copyItem));
@@ -62,7 +64,7 @@ if (!empty($copyItem)) {
         $editItem = $row;
     }
 
-    $sqlQuery = sprintf("INSERT INTO `levpro_replacewords` (`URL`, `FROM`, `TO`) VALUES('%s', '%s', '%s')", $DB->ForSql($editItem["URL"]), $DB->ForSql($editItem['FROM']), $DB->ForSql($editItem["TO"]));
+    $sqlQuery = sprintf("INSERT INTO `levpro_replacewords` (`URL`, `FROM`, `TO`, `QUANTITY`, `GET_PARAMS`) VALUES('%s', '%s', '%s', '%s', '%s')", $DB->ForSql($editItem["URL"]), $DB->ForSql($editItem['FROM']), $DB->ForSql($editItem["TO"]), $DB->ForSql($editItem["QUANTITY"]), $DB->ForSql($editItem["GET_PARAMS"]));
 
     $rsData = $DB->query($sqlQuery);
 
@@ -77,8 +79,8 @@ if (!empty($copyItem)) {
     exit();
 }
 
-if (isset($_POST['save']) || isset($_POST['apply']) || isset($_POST['dontsave']) || isset($_POST['save_and_add'])) {
-    if (isset($_POST['dontsave'])) {
+if (isset($reuestData['save']) || isset($reuestData['apply']) || isset($reuestData['dontsave']) || isset($reuestData['save_and_add'])) {
+    if (isset($reuestData['dontsave'])) {
         header("Location: /bitrix/admin/levpro.replacewords_control_page.php");
 
         exit();
@@ -86,8 +88,8 @@ if (isset($_POST['save']) || isset($_POST['apply']) || isset($_POST['dontsave'])
         $errors = [];
         $result = [];
 
-        if (!empty($_POST['URL'])) {
-            $editItem["URL"] = array_filter($_POST['URL'], function ($item) {
+        if (!empty($reuestData['URL'])) {
+            $editItem["URL"] = array_filter($reuestData['URL'], function ($item) {
                 return !empty($item);
             });
 
@@ -104,8 +106,10 @@ if (isset($_POST['save']) || isset($_POST['apply']) || isset($_POST['dontsave'])
             $editItem["URL"] = implode(', ', $editItem["URL"]);
         }
 
-        $editItem["FROM"] = (new CLevproReplacewords)->safeParam($_POST['FROM']);
-        $editItem["TO"] = (new CLevproReplacewords)->safeParam($_POST['TO']);
+        $editItem["FROM"] = (new CLevproReplacewords)->safeParam($reuestData['FROM']);
+        $editItem["TO"] = (new CLevproReplacewords)->safeParam($reuestData['TO']);
+		$editItem["QUANTITY"] = (new CLevproReplacewords)->safeParam($reuestData['QUANTITY']);
+        $editItem["GET_PARAMS"] = (new CLevproReplacewords)->safeParam($reuestData['GET_PARAMS']);
 
         if (empty($editItem['FROM'])) {
             $errors[] = GetMessage("LEVPRO_REPLACEWORDS_FROM_VALIDATE_ERROR");
@@ -114,14 +118,18 @@ if (isset($_POST['save']) || isset($_POST['apply']) || isset($_POST['dontsave'])
         if (empty($editItem['TO'])) {
             $errors[] = GetMessage("LEVPRO_REPLACEWORDS_TO_VALIDATE_ERROR");
         }
+		
+		if (!empty($editItem['QUANTITY']) && (int) $editItem['QUANTITY'] < 1) {
+            $errors[] = GetMessage("LEVPRO_REPLACEWORDS_QUANTITY_VALIDATE_ERROR");
+        }
 
         if (empty($errors)) {
             if (isset($editItem['ID'])) {
-                $sqlQuery = sprintf("UPDATE `levpro_replacewords` SET `URL` = '%s', `FROM` = '%s', `TO` = '%s' WHERE `ID` = %s", $DB->ForSql($editItem["URL"]), $DB->ForSql($editItem['FROM']), $DB->ForSql($editItem["TO"]), $DB->ForSql($editItem['ID']));
+                $sqlQuery = sprintf("UPDATE `levpro_replacewords` SET `URL` = '%s', `FROM` = '%s', `TO` = '%s', `QUANTITY` = '%s', `GET_PARAMS` = '%s' WHERE `ID` = %s", $DB->ForSql($editItem["URL"]), $DB->ForSql($editItem['FROM']), $DB->ForSql($editItem["TO"]), $DB->ForSql($editItem["QUANTITY"]), $DB->ForSql($editItem["GET_PARAMS"]), $DB->ForSql($editItem['ID']));
 
                 $result[] = GetMessage("LEVPRO_REPLACEWORDS_UPDATE_SUCCESS");
             } else {
-                $sqlQuery = sprintf("INSERT INTO `levpro_replacewords` (`URL`, `FROM`, `TO`) VALUES('%s', '%s', '%s')", $DB->ForSql($editItem["URL"]), $DB->ForSql($editItem['FROM']), $DB->ForSql($editItem["TO"]));
+                $sqlQuery = sprintf("INSERT INTO `levpro_replacewords` (`URL`, `FROM`, `TO`, `QUANTITY`, `GET_PARAMS`) VALUES('%s', '%s', '%s', '%s', '%s')", $DB->ForSql($editItem["URL"]), $DB->ForSql($editItem['FROM']), $DB->ForSql($editItem["TO"]), $DB->ForSql($editItem["QUANTITY"]), $DB->ForSql($editItem["GET_PARAMS"]));
 
                 $result[] = GetMessage("LEVPRO_REPLACEWORDS_ADD_SUCCESS");
             }
@@ -133,12 +141,12 @@ if (isset($_POST['save']) || isset($_POST['apply']) || isset($_POST['dontsave'])
         $_SESSION['result'] = $result;
 
         if (empty($errors)) {
-            if (isset($_POST['save'])) {
+            if (isset($reuestData['save'])) {
                 header("Location: /bitrix/admin/levpro.replacewords_control_page.php");
 
                 exit();
             }
-            if (isset($_POST['save_and_add'])) {
+            if (isset($reuestData['save_and_add'])) {
                 header("Location: /bitrix/admin/levpro.replacewords_control_page_form.php");
 
                 exit();
@@ -147,14 +155,14 @@ if (isset($_POST['save']) || isset($_POST['apply']) || isset($_POST['dontsave'])
     }
 }
 
-$APPLICATION->SetTitle(empty($item["ID"]) ? GetMessage("LEVPRO_REPLACEWORDS_TITLE_ADD") : GetMessage("LEVPRO_REPLACEWORDS_TITLE_EDIT"));
+$APPLICATION->SetTitle(empty($editItem["ID"]) ? GetMessage("LEVPRO_REPLACEWORDS_TITLE_ADD") : GetMessage("LEVPRO_REPLACEWORDS_TITLE_EDIT"));
 
 require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_after.php"); ?>
 <?php if (isset($_SESSION['errors'])) { ?>
     <div class="adm-info-message-wrap adm-info-message-red">
         <?php foreach ($_SESSION['errors'] as $item) { ?>
             <div class="adm-info-message">
-                <div class="adm-info-message-title">Ошибка</div>
+                <div class="adm-info-message-title"><?php echo GetMessage("LEVPRO_REPLACEWORDS_ERROR") ?></div>
                 <?php echo $item ?>
                 <br>
                 <div class="adm-info-message-icon"></div>
@@ -166,7 +174,7 @@ require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_a
     <div class="adm-info-message-wrap adm-info-message-green">
         <?php foreach ($_SESSION['result'] as $item) { ?>
             <div class="adm-info-message">
-                <div class="adm-info-message-title">Успешно</div>
+                <div class="adm-info-message-title"><?php echo GetMessage("LEVPRO_REPLACEWORDS_SUCCESS") ?></div>
                 <?php echo $item ?>
                 <br>
                 <div class="adm-info-message-icon"></div>
@@ -228,6 +236,20 @@ require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_a
                                     <input type="text" size="70" name="TO"
                                            value="<?php echo empty($editItem["TO"]) ? "" : $editItem["TO"] ?>"
                                            required="required">
+                                </td>
+                            </tr>
+							<tr>
+                                <td width="20%" class="adm-detail-content-cell-l"><?php echo GetMessage("LEVPRO_REPLACEWORDS_QUANTITY") ?>:</td>
+                                <td width="80%" class="adm-detail-content-cell-r">
+                                    <input type="text" size="70" name="QUANTITY"
+                                           value="<?php echo empty($editItem["QUANTITY"]) ? "" : $editItem["QUANTITY"] ?>" pattern="[0-9]+">
+                                </td>
+                            </tr>
+							<tr>
+                                <td width="20%" class="adm-detail-content-cell-l"><?php echo GetMessage("LEVPRO_REPLACEWORDS_GET_PARAMS") ?>:</td>
+                                <td width="80%" class="adm-detail-content-cell-r">
+                                    <input type="checkbox" name="GET_PARAMS" value="Y" <?php echo $editItem["GET_PARAMS"] == "Y" ? 'checked="checked"' : "" ?> id="GET_PARAMS" class="adm-designed-checkbox">
+									<label class="adm-designed-checkbox-label" for="GET_PARAMS"></label>
                                 </td>
                             </tr>
                             </tbody>

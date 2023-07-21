@@ -58,22 +58,34 @@ class levpro_replacewords extends CModule
 
 	function InstallFiles($arParams = [])
 	{
-		$phpInterface = '<'.'?';
-		if (file_exists($_SERVER['DOCUMENT_ROOT'].'/bitrix/php_interface/init.php')) {
-			$phpInterface = file_get_contents($_SERVER['DOCUMENT_ROOT'].'/bitrix/php_interface/init.php');
-		}
-		$phpInterface .= PHP_EOL . 'require($_SERVER["DOCUMENT_ROOT"]."/bitrix/php_interface/events/'.self::MODULE_ID.'/content.php");';
-		if (!file_exists($_SERVER["DOCUMENT_ROOT"]."/bitrix/php_interface/events/".self::MODULE_ID)) {
-			mkdir($_SERVER["DOCUMENT_ROOT"]."/bitrix/php_interface/events/".self::MODULE_ID, 0777, true);
-		}
-		file_put_contents(
-			$_SERVER["DOCUMENT_ROOT"]."/bitrix/php_interface/events/".self::MODULE_ID."/content.php",
-			file_get_contents($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/'.self::MODULE_ID.'/install/events/OnEndBufferContent.php')
-		);
-		file_put_contents(
-			$_SERVER['DOCUMENT_ROOT'].'/bitrix/php_interface/init.php',
-			$phpInterface
-		);
+		if (is_dir($p = $_SERVER['DOCUMENT_ROOT'] . '/bitrix/php_interface')) {
+            $filename = $_SERVER['DOCUMENT_ROOT'] . '/bitrix/php_interface/init.php';
+            if (file_exists($filename) && ((int)filesize($filename) !== 0)) {
+                $heandle = fopen($filename, 'rb');
+                $buffer = fread($heandle, filesize($filename));
+                $openTag = $openTag + substr_count($buffer, '<?');
+                $closeTag = $closeTag + substr_count($buffer, '?>');
+                fclose($heandle);
+                if ($openTag !== $closeTag) {
+                    file_put_contents(
+                        $filename,
+                        PHP_EOL . 'require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/'.self::MODULE_ID.'/events/OnEndBufferContent.php");' . PHP_EOL,
+                        FILE_APPEND
+                    );
+                } else {
+                    file_put_contents(
+                        $filename,
+                        '<' . '? require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/'.self::MODULE_ID.'/events/OnEndBufferContent.php");',
+                        FILE_APPEND
+                    );
+                }
+            } else {
+                file_put_contents(
+                    $filename,
+                    '<' . '? require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/'.self::MODULE_ID.'/events/OnEndBufferContent.php");?' . '>'
+                );
+            }
+        }
 		if (is_dir($p = $_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/'.self::MODULE_ID.'/admin'))
 		{
 			if ($dir = opendir($p))
@@ -108,18 +120,15 @@ class levpro_replacewords extends CModule
 	{
 		if (file_exists($_SERVER['DOCUMENT_ROOT'].'/bitrix/php_interface/init.php')) {
 			$phpInterface = file_get_contents($_SERVER['DOCUMENT_ROOT'].'/bitrix/php_interface/init.php');
-		}
-		$phpInterface = str_replace(
-			'require($_SERVER["DOCUMENT_ROOT"]."/bitrix/php_interface/events/'.self::MODULE_ID.'/content.php");',
-			'',
-			$phpInterface
-		);
-		file_put_contents(
-			$_SERVER['DOCUMENT_ROOT'].'/bitrix/php_interface/init.php',
-			$phpInterface
-		);
-		if (file_exists($_SERVER["DOCUMENT_ROOT"]."/bitrix/php_interface/events/".self::MODULE_ID)) {
-			rmdir($_SERVER["DOCUMENT_ROOT"]."/bitrix/php_interface/events/".self::MODULE_ID);
+			$phpInterface = str_replace(
+			    'require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/'.self::MODULE_ID.'/events/OnEndBufferContent.php");',
+			    '',
+			    $phpInterface
+			);
+			file_put_contents(
+			    $_SERVER['DOCUMENT_ROOT'].'/bitrix/php_interface/init.php',
+			    $phpInterface
+			);
 		}
 		if (is_dir($p = $_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/'.self::MODULE_ID.'/admin'))
 		{
