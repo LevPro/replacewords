@@ -15,7 +15,7 @@ Loader::registerAutoLoadClasses(
 
 Class CLevproReplacewords
 {
-	function OnBuildGlobalMenu(&$aGlobalMenu, &$aModuleMenu): void
+	static function OnBuildGlobalMenu(&$aGlobalMenu, &$aModuleMenu): void
 	{
 		$MODULE_ID = basename(dirname(__FILE__));
 
@@ -73,7 +73,6 @@ Class CLevproReplacewords
 
     function safeParam($value): string
 	{
-		$value = trim($value);
         $value = stripslashes($value);
         $value = htmlspecialchars($value);
 
